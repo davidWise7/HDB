@@ -1,0 +1,4 @@
+git config --global user.name "davidWise7"
+git config --global user.email "davidwisemannn777@gmail.com"
+git commit -m "Human Behavior Decoder MVP - Working API ✅"
+git push -u origin main

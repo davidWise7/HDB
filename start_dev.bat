@@ -1,14 +1,27 @@
-@echo off 
-echo Starting Human Behavior Decoder development servers... 
- 
-echo Starting backend server... 
-start "Backend Server" cmd /k "cd backend && python main.py" 
- 
-timeout /t 3 
- 
-echo Starting frontend server... 
-start "Frontend Server" cmd /k "cd frontend && npm start" 
- 
-echo Both servers starting... 
-echo Backend: http://localhost:8000 
-echo Frontend: http://localhost:3000 
+@echo off
+echo Starting Human Behavior Decoder Server...
+echo.
+cd /d "C:\Users\user\Desktop\HumanBehaviorDecoder"
+
+echo 🔧 Activating Virtual Environment...
+call venv\Scripts\activate.bat
+
+echo ✅ Virtual Environment Activated!
+echo Python location: 
+where python
+echo Pip location:
+where pip
+echo.
+
+echo 🔧 Installing/Updating dependencies...
+venv\Scripts\pip.exe install fastapi uvicorn tensorflow scikit-learn librosa pydantic-settings numpy
+echo.
+
+cd backend
+echo 🚀 Starting FastAPI server...
+echo Server will be available at: http://localhost:8000
+echo API Documentation: http://localhost:8000/docs
+echo Press Ctrl+C to stop the server
+echo.
+venv\Scripts\python.exe main.py
+pause

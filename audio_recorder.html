@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recorder - Human Behavior Decoder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .record-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        #recordButton {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.3);
+        }
+        
+        #recordButton:hover {
+            background: #ff3742;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(255, 71, 87, 0.4);
+        }
+        
+        #recordButton:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .recording {
+            color: #ff4757;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .audio-player {
+            margin: 20px 0;
+            width: 100%;
+        }
+        
+        audio {
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 10px;
+        }
+        
+        .download-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .download-btn {
+            background: #2ed573;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #26d467;
+            transform: translateY(-2px);
+        }
+        
+        .api-test {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .test-btn {
+            background: #5352ed;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .test-btn:hover {
+            background: #4742dc;
+            transform: translateY(-2px);
+        }
+        
+        .result {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Audio Recorder</h1>
+        
+        <div class="instructions">
+            <h3>📝 Instructions:</h3>
+            <ol>
+                <li>Click "Start Recording" and speak for 3-10 seconds</li>
+                <li>Click "Stop Recording" when done</li>
+                <li>Download the audio file or test directly with your API</li>
+                <li>Use the downloaded file to test your Human Behavior Decoder!</li>
+            </ol>
+        </div>
+        
+        <div class="record-section">
+            <button id="recordButton" onclick="toggleRecording()">🎤 Start Recording</button>
+            <div id="status" class="status">Ready to record</div>
+        </div>
+        
+        <div id="audioSection" style="display: none;">
+            <div class="audio-player">
+                <h3>🔊 Recorded Audio:</h3>
+                <audio id="audioPlayer" controls></audio>
+            </div>
+            
+            <div class="download-section">
+                <h3>💾 Download Options:</h3>
+                <button class="download-btn" onclick="downloadAudio('wav')">📁 Download as WAV</button>
+                <button class="download-btn" onclick="downloadAudio('mp3')">📁 Download as MP3</button>
+            </div>
+            
+            <div class="api-test">
+                <h3>🚀 Test with API:</h3>
+                <button class="test-btn" onclick="testWithAPI()">🧠 Send to Behavior Decoder</button>
+                <div id="apiResult" class="result" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let audioBlob;
+
+        async function toggleRecording() {
+            const button = document.getElementById('recordButton');
+            const status = document.getElementById('status');
+
+            if (!isRecording) {
+                try {
+                    // Request microphone with better constraints
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            sampleRate: 44100
+                        }
+                    });
+                    
+                    // Check if we have audio tracks
+                    if (stream.getAudioTracks().length === 0) {
+                        throw new Error('No audio tracks found');
+                    }
+                    
+                    console.log('Audio track:', stream.getAudioTracks()[0]);
+                    
+                    // Use specific format for better compatibility
+                    const options = {
+                        mimeType: 'audio/webm;codecs=opus'
+                    };
+                    
+                    // Fallback to default if webm not supported
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options.mimeType = 'audio/wav';
+                    }
+                    
+                    mediaRecorder = new MediaRecorder(stream, options);
+                    
+                    mediaRecorder.ondataavailable = event => {
+                        console.log('Data available:', event.data.size, 'bytes');
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = () => {
+                        console.log('Recording stopped, chunks:', audioChunks.length);
+                        
+                        if (audioChunks.length === 0) {
+                            status.textContent = 'No audio data recorded';
+                            return;
+                        }
+                        
+                        // Create WAV blob instead of MP3 for better compatibility
+                        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        console.log('Audio blob size:', audioBlob.size, 'bytes');
+                        
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        
+                        document.getElementById('audioPlayer').src = audioUrl;
+                        document.getElementById('audioSection').style.display = 'block';
+                        
+                        // Stop all tracks
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    mediaRecorder.onerror = (event) => {
+                        console.error('MediaRecorder error:', event.error);
+                        status.textContent = 'Recording error: ' + event.error;
+                    };
+                    
+                    audioChunks = [];
+                    mediaRecorder.start(1000); // Record in 1-second chunks
+                    isRecording = true;
+                    
+                    button.textContent = '⏹️ Stop Recording';
+                    button.style.background = '#ff6b7a';
+                    status.textContent = 'Recording... Speak loudly and clearly!';
+                    status.className = 'status recording';
+                    
+                } catch (err) {
+                    console.error('Error accessing microphone:', err);
+                    status.textContent = 'Error: ' + err.message;
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                
+                button.textContent = '🎤 Start Recording';
+                button.style.background = '#ff4757';
+                status.textContent = 'Processing recording...';
+                status.className = 'status';
+            }
+        }
+
+        function downloadAudio(format) {
+            if (!audioBlob) return;
+            
+            const url = URL.createObjectURL(audioBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `recorded_audio.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function testWithAPI() {
+            if (!audioBlob) {
+                alert('Please record audio first!');
+                return;
+            }
+
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Sending to API...';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'test_audio.wav');
+
+                const response = await fetch('http://localhost:8000/analyze/voice?analysis_type=full', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    resultDiv.innerHTML = '<strong>✅ API Response:</strong><br>' + JSON.stringify(result, null, 2);
+                } else {
+                    const error = await response.text();
+                    resultDiv.innerHTML = '<strong>❌ API Error:</strong><br>' + error;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<strong>❌ Connection Error:</strong><br>' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
